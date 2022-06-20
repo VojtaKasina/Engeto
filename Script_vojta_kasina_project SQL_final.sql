@@ -32,7 +32,7 @@ CREATE TABLE t_vojta_kasina_potraviny AS
 
 -- VYTVOŘENÍ FINÁLNÍ TABULKY MZDY A HDP + POTRAVINY (JOIN POMOCÍ ROK)
 
--- CREATE TABLE t_vojta_kasina_project_SQL_primary_final AS
+CREATE TABLE t_vojta_kasina_project_SQL_primary_final AS
 SELECT	tvkmah.mzda,
 		tvkmah.rok,
 		tvkmah.odvětví,
