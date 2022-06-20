@@ -18,7 +18,7 @@ B)	Script: podkladová datová sada SQL dotazů se zodpovězením výzkumných o
 Výzkumné otázky a jejich zodpovězení:
 
 1.	Rostou v průběhu let mzdy ve všech odvětvích, nebo v některých klesají?
-Odpověď: V období let 2006–2018 došlo občasným meziročním poklesům ve všech odvětvích (viz vizualizace zpracovaná na základě SQL scriptu v Tableau public zde).
+Odpověď: V období let 2006–2018 došlo občasným meziročním poklesům ve všech odvětvích (viz vizualizace zpracovaná na základě SQL scriptu v Tableau public zde: https://public.tableau.com/app/profile/vojtech.kasina/viz/Mezironprocentulnvvojmezdrstyapoklesydleodvtv/Dashboard_Mezironvvojmezd).
 
 2.	Kolik je možné si koupit litrů mléka a kilogramů chleba za první a poslední srovnatelné období v dostupných datech cen a mezd?
 Odpověď: Za první srov. období (r. 2006) bylo možno koupit za tehdejší průměrnou mzdu 1287 kg chleba nebo 1437 l mléka. Za poslední srov. období (r. 2018) bylo možno koupit za tehdejší průměrnou mzdu 1342 kg chleba nebo 1642 l mléka. Průměrné mzdy za sledovaná období (r. 2006 oproti r. 2018) tedy vzrostly rychleji než ceny vybraných potravin za stejné období.
