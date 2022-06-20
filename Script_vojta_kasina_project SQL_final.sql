@@ -1,12 +1,12 @@
 -- TVORBA TABULKY, ZE KTERÉ JE MOŽNÉ ODPOVĚDĚT NA DOTAZY 1. - 5.
 
--- VYTVOŘENÍ POMOCNÉ TABULKY MZDY
-CREATE TABLE t_vojta_kasina_mzdy_a_HDP AS
+-- VYTVOŘENÍ POMOCNÉ TABULKY SALARY and GDP
+CREATE TABLE t_vojta_kasina_salary_and_GDP AS
 	SELECT
-		cp.value AS mzda,
-		cp.payroll_year AS rok,
-		cpib.name AS odvětví,
-		e.GDP AS HDP_v_USD
+		cp.value AS salary,
+		cp.payroll_year AS `year`,
+		cpib.name AS branch,
+		e.GDP AS GDP_USD
 	FROM czechia_payroll cp 
 	JOIN czechia_payroll_industry_branch cpib
 	    ON cp.industry_branch_code = cpib.code
@@ -16,44 +16,44 @@ CREATE TABLE t_vojta_kasina_mzdy_a_HDP AS
 	GROUP BY cp.payroll_year, cpib.name
 ;
 
--- VYTVOŘENÍ POMOCNÉ TABULKY POTRAVINY	
-CREATE TABLE t_vojta_kasina_potraviny AS
+-- VYTVOŘENÍ POMOCNÉ TABULKY FOOD	
+CREATE TABLE t_vojta_kasina_food AS
 	SELECT 
-		cpc2.name AS druh_potraviny,
-		cp2.value AS cena_potraviny,
-		cpc2.price_value AS množství_potraviny,
-		cpc2.price_unit AS jednotka_potraviny, 
-		YEAR(cp2.date_from) AS rok
+		cpc2.name AS food_name,
+		cp2.value AS food_price,
+		cpc2.price_value AS food_amount,
+		cpc2.price_unit AS food_unit, 
+		YEAR(cp2.date_from) AS `year`
 	 FROM czechia_price cp2
 	 JOIN czechia_price_category cpc2 
 		ON cp2.category_code = cpc2.code
-	GROUP BY rok, druh_potraviny
+	GROUP BY `year`, food_name
 ;
 
 -- VYTVOŘENÍ FINÁLNÍ TABULKY MZDY A HDP + POTRAVINY (JOIN POMOCÍ ROK)
 
 CREATE TABLE t_vojta_kasina_project_SQL_primary_final AS
-SELECT	tvkmah.mzda,
-		tvkmah.rok,
-		tvkmah.odvětví,
-		tvkmah.HDP_v_USD,
-		tvkp.druh_potraviny,
-		tvkp.cena_potraviny,
-		tvkp.množství_potraviny,
-		tvkp.jednotka_potraviny
-FROM 	t_vojta_kasina_mzdy_a_HDP tvkmah 
-JOIN 	t_vojta_kasina_potraviny tvkp 
-		ON tvkmah.rok = tvkp.rok 
+SELECT	tvksag.salary,
+		tvksag.`year`,
+		tvksag.branch,
+		tvksag.GDP_USD,
+		tvkf.food_name,
+		tvkf.food_price,
+		tvkf.food_amount,
+		tvkf.food_unit
+FROM 	t_vojta_kasina_salary_and_GDP tvksag 
+JOIN 	t_vojta_kasina_food tvkf
+		ON tvksag.`year` = tvkf.`year` 
 ;
 
 -- 1. Rostou v průběhu let mzdy ve všech odvětvích, nebo v některých klesají?
 -- Datový podklad: 
-SELECT 		odvětví,
-			ROUND(AVG(mzda)) AS průměrná_mzda,
-			rok
+SELECT 		branch,
+			ROUND(AVG(salary)) AS avg_salary,
+			`year`
 FROM 		t_vojta_kasina_project_SQL_primary_final tvkpspf 
-GROUP BY 	odvětví, rok 
-ORDER BY 	odvětví, rok
+GROUP BY 	branch, `year`  
+ORDER BY 	branch, `year`
 ;
 
 -- Odpověď 1.ot: VIZUALIZACE
@@ -63,18 +63,18 @@ ORDER BY 	odvětví, rok
 
 -- 2. Kolik je možné si koupit litrů mléka a kilogramů chleba za první a poslední srovnatelné období v dostupných datech cen a mezd?
 SELECT
-		rok,
-		druh_potraviny,
-		ROUND(AVG(cena_potraviny), 2) AS průměrná_cena_potraviny,
-		ROUND(AVG(mzda), 2) AS průměrná_mzda,
-		ROUND(AVG(mzda)/AVG(cena_potraviny)) AS množství_potraviny_za_prům_mzdu
+		`year`,
+		food_name,
+		ROUND(AVG(food_price), 2) AS avg_food_price,
+		ROUND(AVG(salary), 2) AS avg_salary,
+		ROUND(AVG(salary)/AVG(food_price)) AS food_amount_to_avg_salary
 FROM 	t_vojta_kasina_project_SQL_primary_final tvkpspf
 WHERE 
-		(druh_potraviny = 'Chléb konzumní kmínový'
-		OR druh_potraviny = 'Mléko polotučné pasterované')
-		AND (rok = 2006
-		OR rok = 2018)
-GROUP BY rok, druh_potraviny
+		(food_name = 'Chléb konzumní kmínový'
+		OR food_name = 'Mléko polotučné pasterované')
+		AND (`year` = 2006
+		OR `year` = 2018)
+GROUP BY `year`, food_name
 ;
 
 -- Odpověď 2.ot:
@@ -84,26 +84,26 @@ GROUP BY rok, druh_potraviny
 -- za stejné období.
 
 -- 3. Která kategorie potravin zdražuje nejpomaleji (je u ní nejnižší procentuální meziroční nárůst)?
-WITH pomocná AS (
+WITH extra_table AS (
 SELECT 	
-		rok,
-		druh_potraviny,
-		cena_potraviny,
-		cena_potraviny - LAG(cena_potraviny)
-		OVER (PARTITION BY druh_potraviny ORDER BY rok)AS meziroční_změny_cen
+		`year`,
+		food_name,
+		food_price,
+		food_price - LAG(food_price)
+		OVER (PARTITION BY food_name ORDER BY `year`)AS year_diff_price
 FROM t_vojta_kasina_project_SQL_primary_final tvkpspf
-WHERE rok = 2006 OR rok = 2018
-GROUP BY druh_potraviny, rok, cena_potraviny 
-ORDER BY druh_potraviny 
+WHERE `year` IN (2006, 2018)
+GROUP BY food_name, `year`, food_price
+ORDER BY food_name
 )
 	SELECT	
-	rok,
-	druh_potraviny,
-	cena_potraviny,
-	meziroční_změny_cen,
-	ROUND(meziroční_změny_cen/cena_potraviny * 100,2) AS procenta
-	FROM pomocná
-	ORDER BY procenta
+	`year`,
+	food_name,
+	food_price,
+	year_diff_price,
+	ROUND(year_diff_price/food_price * 100,2) AS percent
+	FROM extra_table
+	ORDER BY percent
 ;
 
 -- Odpověď 3.ot.:
@@ -113,24 +113,25 @@ ORDER BY druh_potraviny
 
 -- 4. Existuje rok, ve kterém byl meziroční nárůst cen potravin výrazně vyšší než růst mezd (větší než 10 %)?
 -- Datový podklad:
-WITH pomocná2 AS (
-SELECT 	rok,
-		ROUND(AVG(mzda), 2) AS avg_mzda,
-		ROUND((AVG(mzda) - LAG(AVG(mzda)) OVER (ORDER BY rok)) / LAG(AVG(mzda)) OVER (ORDER BY rok) * 100, 2) AS rozdíl_mezd_perc,
-		ROUND(AVG(cena_potraviny), 2) AS avg_cena_potraviny,
-		ROUND((AVG(cena_potraviny) - LAG(AVG(cena_potraviny)) OVER (ORDER BY rok)) / LAG(AVG(cena_potraviny)) OVER (ORDER BY rok) * 100, 2) AS rozdíl_cen_potravin_perc
+
+WITH extra_table_2 AS (
+SELECT 	`year`,
+		ROUND(AVG(salary), 2) AS avg_salary,
+		ROUND((AVG(salary) - LAG(AVG(salary)) OVER (ORDER BY `year`)) / LAG(AVG(salary)) OVER (ORDER BY `year`) * 100, 2) AS salary_diff_perc,
+		ROUND(AVG(food_price), 2) AS avg_food_price,
+		ROUND((AVG(food_price) - LAG(AVG(food_price)) OVER (ORDER BY `year`)) / LAG(AVG(food_price)) OVER (ORDER BY `year`) * 100, 2) AS food_price_diff_perc
 FROM t_vojta_kasina_project_SQL_primary_final tvkpspf 
-GROUP BY rok
+GROUP BY `year` 
 )
 	SELECT 
-			rok,
-			avg_mzda,
-			rozdíl_mezd_perc,
-			avg_cena_potraviny,
-			rozdíl_cen_potravin_perc,
-			rozdíl_mezd_perc - (ABS(rozdíl_cen_potravin_perc)) AS výsledek
-	FROM	pomocná2
-	ORDER BY výsledek
+			`year`,
+			avg_salary,
+			salary_diff_perc,
+			avg_food_price,
+			food_price_diff_perc,
+			salary_diff_perc - (ABS(food_price_diff_perc)) AS food_salary_diff
+	FROM	extra_table_2
+	ORDER BY food_salary_diff
 	;
 	
 -- Odpověď 4.ot.: Ano, v roce 2013 byl nárůst cen potravin výrazně vyšší než nárůst mezd (cena potravin vzrostla
@@ -141,16 +142,13 @@ GROUP BY rok
 -- projeví se na to cenách potravin či mzdách ve stejném nebo následujícím roce výraznějším růstem?
 
 SELECT 
-		rok,
--- 		HDP_v_USD,
-		ROUND((HDP_v_USD - LAG(HDP_v_USD) OVER (ORDER BY rok)) / LAG(HDP_v_USD) OVER (ORDER BY rok) * 100, 2) AS rozdíl_HPD_perc,
--- 		ROUND(AVG(mzda), 2) AS avg_mzda,
-		ROUND((AVG(mzda) - LAG(AVG(mzda)) OVER (ORDER BY rok)) / LAG(AVG(mzda)) OVER (ORDER BY rok) * 100, 2) AS rozdíl_mezd_perc,
--- 		ROUND(AVG(cena_potraviny), 2) AS avg_cena_potraviny,
-		ROUND((AVG(cena_potraviny) - LAG(AVG(cena_potraviny)) OVER (ORDER BY rok)) / LAG(AVG(cena_potraviny)) OVER (ORDER BY rok) * 100, 2) AS rozdíl_cen_potravin_perc
+		`year`,
+		ROUND((GDP_USD - LAG(GDP_USD) OVER (ORDER BY `year`)) / LAG(GDP_USD) OVER (ORDER BY `year`) * 100, 2) AS GDP_diff_perc,
+		ROUND((AVG(salary) - LAG(AVG(salary)) OVER (ORDER BY `year`)) / LAG(AVG(salary)) OVER (ORDER BY `year`) * 100, 2) AS salary_diff_perc,
+		ROUND((AVG(food_price) - LAG(AVG(food_price)) OVER (ORDER BY `year`)) / LAG(AVG(food_price)) OVER (ORDER BY `year`) * 100, 2) AS food_price_diff_perc
 FROM t_vojta_kasina_project_SQL_primary_final tvkpspf
-GROUP BY rok 
-ORDER BY rok
+GROUP BY `year`  
+ORDER BY `year` 
 ;
 
 -- Odpověď ot. 5:
@@ -178,10 +176,10 @@ SELECT
 		e.GDP,
 		e.gini, 
 		e.population, 
-		tvkpspf.HDP_v_USD AS HDP_CZE
+		tvkpspf.GDP_USD AS GDP_CZE
 FROM economies e
 JOIN t_vojta_kasina_project_SQL_primary_final tvkpspf
-	ON e.`year` = tvkpspf.rok 
+	ON e.`year` = tvkpspf.`year` 
 ;
 
 SELECT 	`year`,
@@ -189,10 +187,9 @@ SELECT 	`year`,
 		GDP, 
 		ROUND((GDP - LAG(GDP) OVER (ORDER BY `year`)) / LAG(GDP) OVER (ORDER BY `year`) * 100, 2) AS GDP_diff_perc,
 		gini,
-		HDP_CZE,
-		ROUND((HDP_CZE - LAG(HDP_CZE) OVER (ORDER BY `year`)) / LAG(HDP_CZE) OVER (ORDER BY `year`) * 100, 2) AS HDP_CZE_diff_perc
+		GDP_CZE,
+		ROUND((GDP_CZE - LAG(GDP_CZE) OVER (ORDER BY `year`)) / LAG(GDP_CZE) OVER (ORDER BY `year`) * 100, 2) AS GDP_CZE_diff_perc
 FROM t_vojta_kasina_project_SQL_secondary_final
-WHERE 	1 = 1
- 		AND country = 'European Union'
- GROUP BY country, `year` 
-; 
+WHERE 	country = 'European Union'
+GROUP BY country, `year` 
+;
