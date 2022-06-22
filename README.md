@@ -2,7 +2,9 @@ SQL projekt:
 Datové poklady k porovnání mezd, základních potravin a jejich dostupnosti pro obyvatele ČR, HDP a nárůst cen potravin/mezd v čase, dodatečné datové podklady za ostatní státy (vhledy specificky pro EU a jejich srovnání s ČR).
 
 Výstup projektu: 
+
 A)	Tabulky
+
 2 samostatné tabulky:
 -	t_vojta_kasina_project_SQL_primary_final
 -	t_vojta_kasina_project_SQL_secondary_final
