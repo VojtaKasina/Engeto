@@ -8,8 +8,8 @@ A)	Tabulky
 -	t_vojta_kasina_project_SQL_secondary_final
 
 -	2 pomocné tabulky (vztahující se k tab. t_vojta_kasina_project_SQL_primary_final)
-o	t_vojta_kasina_mzdy_a_HDP
-o	t_vojta_kasina_potraviny
+o	t_vojta_kasina_salary_a_GDP
+o	t_vojta_kasina_food
 
 B)	Script: podkladová datová sada SQL dotazů se zodpovězením výzkumných otázek 
 -	Script_vojta_kasina_project SQL_final
